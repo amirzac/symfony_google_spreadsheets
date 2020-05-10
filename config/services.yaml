@@ -29,3 +29,6 @@ services:
     App\Service\GoogleApiClient\GoogleApiClientProvider:
         factory: ['App\Service\GoogleApiClient\Factory', 'createClientProvider']
         arguments: ['%env(GOOGLE_API_CREDENTIAL_FILE)%', '%env(GOOGLE_API_APPLICATION_NAME)%']
+
+    App\Repository\HistoryRepositoryInterface:
+        factory: ['App\Factory\HistoryRepositoryFactory', 'createJsonFileRepository']
