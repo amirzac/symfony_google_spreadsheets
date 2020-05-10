@@ -6,7 +6,7 @@ namespace App\Model;
 
 class History
 {
-    private array $items;
+    private array $items = [];
 
     public function getItems(): array {
         return $this->items;

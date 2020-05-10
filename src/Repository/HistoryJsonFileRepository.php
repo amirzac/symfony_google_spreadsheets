@@ -9,6 +9,8 @@ use Symfony\Component\Serializer\SerializerInterface;
 
 class HistoryJsonFileRepository
 {
+    private const FILENAME = 'data.json';
+
     private SerializerInterface $serializer;
 
     public function __construct(SerializerInterface $serializer)
@@ -20,8 +22,19 @@ class HistoryJsonFileRepository
     {
         $data = $this->serializer->serialize($history->getItems(), 'json');
 
-        $fp = fopen('data.json', 'w');
+        $fp = fopen(self::FILENAME, 'w');
         fwrite($fp, $data);
         fclose($fp);
+    }
+
+    public function get(): History
+    {
+        $data = json_decode(file_get_contents(self::FILENAME));
+        $history = new History();
+        foreach ($data as $item) {
+            $history->addItem($item);
+        }
+
+        return $history;
     }
 }

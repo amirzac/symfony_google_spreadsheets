@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Model\History;
 use App\Service\GoogleApiClient\GoogleApiClientProvider;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -13,9 +12,9 @@ use Symfony\Component\Console\Input\InputArgument;
 use App\Repository\HistoryJsonFileRepository;
 use Google_Service_Exception;
 
-class GetSpreadsheetsData extends Command
+class UpdateSpreadsheetsData extends Command
 {
-    protected static $defaultName = 'spreadsheets:get-and-save';
+    protected static $defaultName = 'spreadsheets:update';
 
     private GoogleApiClientProvider $googleApiClientProvider;
 
@@ -36,33 +35,39 @@ class GetSpreadsheetsData extends Command
     protected function configure()
     {
         $this
-            ->setDescription('Get data form google spreadsheets and save it to the local database.')
+            ->setDescription('Update spreadsheets data')
             ->addArgument('sheetId', InputArgument::REQUIRED, 'sheetId')
         ;
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        try {
-            $response = $this->googleApiClientProvider->sheets()->spreadsheets_values->get(
-                $input->getArgument('sheetId'),
-                'Sheet1'
-            );
+        $history = $this->historyRepository->get();
 
-            $history = new History();
+        $body = new \Google_Service_Sheets_ValueRange([
+            'values' => $history->getItems(),
+        ]);
 
-            foreach ($response->getValues() as $value) {
-                $history->addItem($value);
-            }
+        $params = [
+            'valueInputOption' => 'RAW'
+        ];
 
-            $this->historyRepository->save($history);
+        $response = $this->googleApiClientProvider->sheets()->spreadsheets_values
+            ->update($input->getArgument('sheetId'), 'A1:K', $body, $params);
 
-            $output->writeln('<info>Data has been saved</info>');
-
-        } catch (Google_Service_Exception $exception) {
-            $output->writeln(sprintf("<error>%s</error>", $exception->getMessage()));
-        }
-
-        return 1;
+        /*
+        SheetID,
+        ID operacji,
+        data wykonania,
+        czas trwania,
+        użyta pamięć,
+        status operacji,
+        ilość przetworzonych wierszy
+           */
+        dd(
+            $response->toSimpleObject(),
+            $response->getSpreadsheetId(),
+            $response->getUpdatedCells()
+        );
     }
 }
