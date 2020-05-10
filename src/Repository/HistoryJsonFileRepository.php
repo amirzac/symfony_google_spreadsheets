@@ -29,6 +29,9 @@ class HistoryJsonFileRepository
 
     public function get(): History
     {
+        if(!file_exists(self::FILENAME)) {
+            throw new \LogicException(sprintf("File %s doesn't exist",self::FILENAME));
+        }
         $data = json_decode(file_get_contents(self::FILENAME));
         $history = new History();
         foreach ($data as $item) {

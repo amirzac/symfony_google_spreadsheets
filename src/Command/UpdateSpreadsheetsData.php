@@ -11,6 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use App\Repository\HistoryJsonFileRepository;
 use Google_Service_Exception;
+use Symfony\Component\Stopwatch\Stopwatch;
 
 class UpdateSpreadsheetsData extends Command
 {
@@ -20,9 +21,12 @@ class UpdateSpreadsheetsData extends Command
 
     private HistoryJsonFileRepository $historyRepository;
 
+    private Stopwatch $stopwatch;
+
     public function __construct(
         GoogleApiClientProvider $googleApiClientProvider,
         HistoryJsonFileRepository $historyRepository,
+        Stopwatch $stopwatch,
         string $name = null
     )
     {
@@ -30,6 +34,7 @@ class UpdateSpreadsheetsData extends Command
 
         $this->googleApiClientProvider = $googleApiClientProvider;
         $this->historyRepository = $historyRepository;
+        $this->stopwatch = $stopwatch;
     }
 
     protected function configure()
@@ -42,32 +47,37 @@ class UpdateSpreadsheetsData extends Command
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        $history = $this->historyRepository->get();
+        try {
+            $this->stopwatch->start(self::$defaultName);
 
-        $body = new \Google_Service_Sheets_ValueRange([
-            'values' => $history->getItems(),
-        ]);
+            $history = $this->historyRepository->get();
 
-        $params = [
-            'valueInputOption' => 'RAW'
-        ];
+            $body = new \Google_Service_Sheets_ValueRange([
+                'values' => $history->getItems(),
+            ]);
 
-        $response = $this->googleApiClientProvider->sheets()->spreadsheets_values
-            ->update($input->getArgument('sheetId'), 'A1:K', $body, $params);
+            $params = [
+                'valueInputOption' => 'RAW'
+            ];
 
-        /*
-        SheetID,
-        ID operacji,
-        data wykonania,
-        czas trwania,
-        użyta pamięć,
-        status operacji,
-        ilość przetworzonych wierszy
-           */
-        dd(
-            $response->toSimpleObject(),
-            $response->getSpreadsheetId(),
-            $response->getUpdatedCells()
-        );
+            $response = $this->googleApiClientProvider->sheets()->spreadsheets_values
+                ->update($input->getArgument('sheetId'), 'A1:K', $body, $params);
+
+            $event = $this->stopwatch->stop(self::$defaultName);
+
+            $output->writeln([
+                sprintf("SheetID: %s", $response->getSpreadsheetId()),
+                sprintf("Operation id: %s", '?'),
+                sprintf("Execution date: %s", (new \DateTime())->format("Y-m-d h:i:s")),
+                sprintf("Execution process time: %s", $event->getEndTime() - $event->getStartTime()),
+                sprintf("Memory used: %s", $event->getMemory()),
+                sprintf("Status: %s", 'Success'),
+                sprintf("Updated cells: %s", $response->getUpdatedCells()),
+            ]);
+        } catch (Google_Service_Exception $exception) {
+            $output->writeln(sprintf("<error>%s</error>", $exception->getMessage()));
+        }
+
+        return 1;
     }
 }

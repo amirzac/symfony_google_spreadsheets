@@ -133,6 +133,9 @@
     "symfony/service-contracts": {
         "version": "v2.0.1"
     },
+    "symfony/stopwatch": {
+        "version": "v5.0.8"
+    },
     "symfony/var-dumper": {
         "version": "v5.0.8"
     },
