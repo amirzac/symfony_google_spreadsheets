@@ -8,5 +8,5 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
-/config/google-api-client/*
+/config/google-api-client/*.json
 data.json
